@@ -25,20 +25,34 @@ button:disabled{opacity:.4;cursor:not-allowed}
 #rb input{width:22px;height:22px}
 #fin{position:relative;overflow:hidden;background:linear-gradient(135deg,#ffd6e0,#d6e4ff);color:#222}
 #msg{position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);left:0;right:0;text-align:center;font-size:clamp(26px,7vw,52px);font-weight:800;color:#e8456b;text-shadow:0 2px 0 #fff;z-index:3;pointer-events:none}
-#pet{position:absolute;left:0;top:0;font-size:90px;line-height:1;will-change:transform;z-index:2}
-#pet img{width:140px;height:140px;object-fit:contain;display:block}
+.pet{position:absolute;left:0;top:0;font-size:90px;line-height:1;will-change:transform;z-index:2;cursor:pointer}
+.pet img{width:130px;height:130px;object-fit:contain;display:block;pointer-events:none}
+#prof{display:flex;gap:12px;align-items:center;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bd)}
+#uprev{width:64px;height:64px;border-radius:50%;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;flex:none}
+#uprev img{width:100%;height:100%;object-fit:cover}
+#un{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg)}
+.fl{display:inline-block;margin-top:6px;font-size:13px;color:var(--ac);cursor:pointer;text-decoration:underline}
+#msg .ic{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #fff;display:block;margin:0 auto 6px}
 #cv{position:absolute;inset:0;z-index:1}
 #cfg{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);right:8px;z-index:4;font-size:12px;background:rgba(255,255,255,.7);padding:6px 10px;border-radius:8px}
+#err{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:99;background:#b3261e;color:#fff;font-size:13px;line-height:1.5;padding:10px 12px;border-radius:10px;white-space:pre-wrap}
+#cfg{bottom:calc(env(safe-area-inset-bottom,0px) + 60px)!important}
 </style></head><body>
 
 <div class="scr on" id="s1"><div class="card">
-<h1>🔞 年齢確認</h1>
-<p class="warn">ここから先は成人コンテンツです</p>
+<div id="prof">
+<div id="uprev">👤</div>
+<div style="flex:1;text-align:left">
+<input id="un" type="text" maxlength="20" placeholder="ユーザー名">
+<label class="fl">アイコンを選ぶ<input type="file" accept="image/*" id="ui" hidden></label>
+</div></div>
+<h1>年齢確認</h1>
+<p class="warn">ここから先は成人向けコンテンツです</p>
 <p>あなたは18歳以上ですか？</p>
 <div id="b1">
 <button class="p" onclick="q2('yes')">はい</button>
 <button onclick="q2('no')">いいえ</button>
-<button onclick="go(2)">今日18歳になった</button>
+<button onclick="go(2)">今日が誕生日</button>
 </div>
 <div id="b2" style="display:none"><p id="q2t"></p><button class="p" onclick="go(2)">はい</button></div>
 </div></div>
@@ -62,13 +76,44 @@ button:disabled{opacity:.4;cursor:not-allowed}
 
 <div class="scr" id="fin">
 <canvas id="cv"></canvas>
-<div id="msg">🎉 お誕生日おめでとう 🎉</div>
-<div id="pet">🎂</div>
-<div id="cfg">画像を指定: <input type="file" accept="image/*" id="fi" style="max-width:150px"></div>
+<div id="msg"></div>
+<div id="pets"></div>
+<div id="cfg">画像を追加（複数可）: <input type="file" accept="image/*" multiple id="fi" style="max-width:170px"></div>
 </div>
 
+<div id="err" style="display:none"></div>
 <script>
+/* ========== ★ここを書き換えてください★ ==========
+   name   : 祝われる人の名前（空欄 "" なら入力欄から）
+   icon   : アイコン画像のファイル名（空欄 "" なら選択ボタンから）
+   photos : 最後の画面に出す写真のリスト（空 [] なら🎂が1つだけ）
+ ■ 画像はこのHTMLと同じフォルダに置き、ファイル名だけを書く（例 "photo1.jpg"）
+ ■ 引用符は半角の " か ' を使う（全角の “ ” は不可）
+ ■ フォルダの区切りは / を使う（Windowsの \ は不可）
+ ■ 写真はカンマ , で区切る */
+var PRESET={
+  name:"etinogard",
+  icon:"",
+  photos:["C:\Users\User\Downloads\誕生日\photos1.png"
+    // "photo1.jpg",
+    // "photo2.jpg",
+    // "photo3.jpg"
+  ]
+};
+/* ========== ここまで ========== */
+</script>
+<script>
+var P=(typeof PRESET==='object'&&PRESET)||{};
 const $=id=>document.getElementById(id);
+const errs=[];
+function showErr(m){errs.push(m);const e=$('err');e.style.display='block';e.textContent='⚠ '+errs.slice(-3).join('\n⚠ ');}
+window.addEventListener('error',ev=>{if(ev.target&&ev.target.tagName==='IMG')return;showErr('エラー: '+ev.message+'（'+ev.lineno+'行目）');});
+if(typeof PRESET==='undefined')showErr('設定（PRESET）の書き方に誤りがあるため読み込めませんでした。引用符やカンマ、\\の使用を確認してください。');
+function mkImg(u,cls){
+ u=String(u).replace(/\\/g,'/');
+ const im=document.createElement('img');im.alt='';if(cls)im.className=cls;
+ im.onerror=()=>{showErr('画像を読み込めません: '+u.slice(0,60)+'\n→ ファイル名・置き場所（HTMLと同じフォルダ）を確認してください');im.replaceWith(document.createTextNode('🖼️'));};
+ im.src=u;return im;}
 function go(n){document.querySelectorAll('.scr').forEach(e=>e.classList.remove('on'));
  $(n==4?'fin':'s'+n).classList.add('on');
  if(n==2)initRobot(); if(n==3)initTerms(); if(n==4)startFin();}
@@ -125,30 +170,65 @@ function showTerm(){
  btn.onclick=()=>{ti++;if(ti>=clauses.length)go(4);else showTerm();};
 }
 
+/* ユーザー情報 */
+let userIcon='';
+if(P.name)$('un').value=String(P.name);
+if(P.icon){userIcon=String(P.icon);$('uprev').innerHTML='';$('uprev').appendChild(mkImg(userIcon));}
+$('ui').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{userIcon=r.result;$('uprev').innerHTML='<img alt="" src="'+r.result+'">';};r.readAsDataURL(f);};
+
 /* 最終画面 */
-let started=false,img=null;
-$('fi').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
- r.onload=()=>{$('pet').innerHTML='<img alt="" src="'+r.result+'">';};r.readAsDataURL(f);};
+let started=false;const pets=[];
+function addPet(html){
+ const el=document.createElement('div');el.className='pet';
+ if(typeof html==='string')el.textContent=html;else el.appendChild(html);
+ $('pets').appendChild(el);
+ const p={el,def:html==='🎂',hop:0,hopT:Math.random()*3,
+  ph:Array.from({length:8},()=>Math.random()*1000),sp:Array.from({length:8},()=>.2+Math.random()*.5),
+  k:.8+Math.random()*.5};
+ el.onclick=()=>{p.hop=1};
+ pets.push(p);
+}
+$('fi').onchange=e=>{
+ [...e.target.files].forEach(f=>{const r=new FileReader();
+  r.onload=()=>{
+   const d=pets.findIndex(p=>p.def);
+   if(d>=0){pets[d].el.remove();pets.splice(d,1);}
+   addPet(mkImg(r.result));};
+  r.readAsDataURL(f);});
+ e.target.value='';
+};
+function setMsg(){
+ const m=$('msg');m.innerHTML='';
+ if(userIcon){const im=mkImg(userIcon,'ic');m.appendChild(im);}
+ const n=$('un').value.trim();
+ const d=document.createElement('div');
+ d.textContent='🎉 '+(n?n+'さん、':'')+'お誕生日おめでとう 🎉';
+ m.appendChild(d);
+}
 function startFin(){
+ setMsg();
  if(started)return;started=true;
- const pet=$('pet'),fin=$('fin');
- const ph=Array.from({length:8},()=>Math.random()*1000);
- const sp=Array.from({length:8},()=>.2+Math.random()*.5);
- let hop=0,hopT=0,burst=0,last=performance.now(),t=0;
- pet.onclick=()=>{hop=1;burst=1;};
+ const fin=$('fin');
+ const ph=Array.isArray(P.photos)?P.photos.filter(Boolean):[];
+ if(ph.length)ph.forEach(u=>addPet(mkImg(u)));else addPet('🎂');
+ let last=performance.now(),t=0;
  function loop(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;t+=dt;
-  const W=fin.clientWidth,H=fin.clientHeight,pw=pet.offsetWidth,phh=pet.offsetHeight;
-  const n=i=>Math.sin(t*sp[i]*2+ph[i])*.5+Math.sin(t*sp[i]*3.1+ph[i]*1.7)*.3+Math.sin(t*sp[i]*.7+ph[i]*2.3)*.2;
-  hopT-=dt;if(hopT<=0){hopT=1+Math.random()*3;if(Math.random()<.6)hop=1;}
-  hop=Math.max(0,hop-dt*1.6);
-  const hy=-Math.sin((1-hop)*Math.PI)*(hop>0?60:0);
-  const x=(W-pw)/2+n(0)*(W-pw)/2*1.1,y=(H-phh)/2+n(1)*(H-phh)/2*.9+hy;
-  const breath=1+Math.sin(t*3)*.04;
-  const sq=hop>0?1+Math.cos((1-hop)*Math.PI*2)*.12:1;
-  const rot=n(2)*20+Math.sin(t*5)*3;
-  const flip=Math.sin(t*sp[3]*1.5+ph[3])>0?1:-1;
-  pet.style.transform=`translate(${x}px,${y}px) rotate(${rot}deg) scale(${flip*breath/sq},${breath*sq})`;
+  const W=fin.clientWidth,H=fin.clientHeight;
+  pets.forEach(p=>{
+   const el=p.el,pw=el.offsetWidth,ph_=el.offsetHeight;
+   const n=i=>Math.sin(t*p.sp[i]*2+p.ph[i])*.5+Math.sin(t*p.sp[i]*3.1+p.ph[i]*1.7)*.3+Math.sin(t*p.sp[i]*.7+p.ph[i]*2.3)*.2;
+   p.hopT-=dt;if(p.hopT<=0){p.hopT=1+Math.random()*3;if(Math.random()<.6)p.hop=1;}
+   p.hop=Math.max(0,p.hop-dt*1.6);
+   const hy=p.hop>0?-Math.sin((1-p.hop)*Math.PI)*60:0;
+   const x=(W-pw)/2+n(0)*(W-pw)/2*1.1,y=(H-ph_)/2+n(1)*(H-ph_)/2*.9+hy;
+   const breath=p.k*(1+Math.sin(t*3+p.ph[4])*.04);
+   const sq=p.hop>0?1+Math.cos((1-p.hop)*Math.PI*2)*.12:1;
+   const rot=n(2)*20+Math.sin(t*5+p.ph[5])*3;
+   const flip=Math.sin(t*p.sp[3]*1.5+p.ph[3])>0?1:-1;
+   el.style.transform=`translate(${x}px,${y}px) rotate(${rot}deg) scale(${flip*breath/sq},${breath*sq})`;
+  });
   draw(dt,W,H);
   requestAnimationFrame(loop);
  }

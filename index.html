@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>年齢確認</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f4f1ea;--fg:#222;--card:#fff;--ac:#e8456b;--bd:#ddd}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17161a;--fg:#eee;--card:#25232b;--bd:#444}}
+:root[data-theme="dark"]{--bg:#17161a;--fg:#eee;--card:#25232b;--bd:#444}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Yu Gothic",sans-serif;overflow:hidden}
+.scr{display:none;height:100%;align-items:center;justify-content:center;padding:16px}
+.scr.on{display:flex}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:24px;max-width:460px;width:100%;text-align:center}
+h1{font-size:22px;margin:0 0 8px}
+.warn{color:var(--ac);font-weight:700}
+button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:10px;padding:12px 18px;margin:6px;cursor:pointer}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0}
+.t{font-size:36px;padding:10px;border:2px solid var(--bd);border-radius:8px;cursor:pointer;user-select:none}
+.t.s{border-color:var(--ac);background:rgba(232,69,107,.15)}
+#terms{height:240px;overflow-y:auto;text-align:left;font-size:13px;line-height:1.7;border:1px solid var(--bd);border-radius:8px;padding:10px;margin:10px 0}
+#rb{display:flex;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:8px;padding:14px;margin:14px 0;position:relative;cursor:pointer}
+#rb input{width:22px;height:22px}
+#fin{position:relative;overflow:hidden;background:linear-gradient(135deg,#ffd6e0,#d6e4ff);color:#222}
+#msg{position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);left:0;right:0;text-align:center;font-size:clamp(26px,7vw,52px);font-weight:800;color:#e8456b;text-shadow:0 2px 0 #fff;z-index:3;pointer-events:none}
+#pet{position:absolute;left:0;top:0;font-size:90px;line-height:1;will-change:transform;z-index:2}
+#pet img{width:140px;height:140px;object-fit:contain;display:block}
+#cv{position:absolute;inset:0;z-index:1}
+#cfg{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);right:8px;z-index:4;font-size:12px;background:rgba(255,255,255,.7);padding:6px 10px;border-radius:8px}
+</style></head><body>
+
+<div class="scr on" id="s1"><div class="card">
+<h1>🔞 年齢確認</h1>
+<p class="warn">ここから先は成人コンテンツです</p>
+<p>あなたは18歳以上ですか？</p>
+<div id="b1">
+<button class="p" onclick="q2('yes')">はい</button>
+<button onclick="q2('no')">いいえ</button>
+<button onclick="go(2)">今日18歳になった</button>
+</div>
+<div id="b2" style="display:none"><p id="q2t"></p><button class="p" onclick="go(2)">はい</button></div>
+</div></div>
+
+<div class="scr" id="s2"><div class="card">
+<h1>🤖 ロボット確認</h1>
+<p>あなたはロボットですか？</p>
+<div id="rb" onclick="dodge()"><input type="checkbox" id="rc" disabled><span id="rt">私はロボットではありません</span></div>
+<div id="pz" style="display:none">
+<p>ケーキが写っているマスをすべて選んでください</p>
+<div class="grid" id="gr"></div>
+<button class="p" onclick="chk()">確認</button><p id="rm" class="warn"></p>
+</div></div></div>
+
+<div class="scr" id="s3"><div class="card">
+<h1>📜 利用規約</h1>
+<p style="font-size:13px">最後まで読んで「承諾」を押してください（<span id="tp">1</span>/<span id="tn"></span>）</p>
+<div id="terms"></div>
+<button class="p" id="ta" disabled>最後までスクロールしてください</button>
+</div></div>
+
+<div class="scr" id="fin">
+<canvas id="cv"></canvas>
+<div id="msg">🎉 お誕生日おめでとう 🎉</div>
+<div id="pet">🎂</div>
+<div id="cfg">画像を指定: <input type="file" accept="image/*" id="fi" style="max-width:150px"></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+function go(n){document.querySelectorAll('.scr').forEach(e=>e.classList.remove('on'));
+ $(n==4?'fin':'s'+n).classList.add('on');
+ if(n==2)initRobot(); if(n==3)initTerms(); if(n==4)startFin();}
+function q2(k){$('b1').style.display='none';$('b2').style.display='block';
+ $('q2t').textContent=k=='yes'?'今日18歳になりましたか？':'嘘ですね。今日18歳になりましたか？';}
+
+/* ロボット確認 */
+let dodges=0;
+function initRobot(){dodges=0;}
+function dodge(){
+ const b=$('rb'),t=$('rt');
+ const lines=['本当にロボットではありませんか？','ロボットはそう言います…','怪しい。もう一度。'];
+ if(dodges<3){t.textContent=lines[dodges];b.style.transform=`translateX(${dodges%2?-30:30}px)`;dodges++;return;}
+ b.style.transform='';$('rc').checked=true;t.textContent='確認中…';
+ setTimeout(()=>{b.style.display='none';$('pz').style.display='block';mkGrid();},700);
+}
+const pool=['🎂','🍰','🧁','🍔','🚗','🌳','🐶','🎈','🍕'];
+let cakes=[];
+function mkGrid(){
+ const g=$('gr');g.innerHTML='';cakes=[];$('rm').textContent='';
+ const a=pool.slice().sort(()=>Math.random()-.5);
+ a.forEach((e,i)=>{const d=document.createElement('div');d.className='t';d.textContent=e;
+  d.onclick=()=>d.classList.toggle('s');d.dataset.c=(e=='🎂'||e=='🍰'||e=='🧁')?1:0;g.appendChild(d);});
+}
+function chk(){
+ const ok=[...document.querySelectorAll('.t')].every(d=>(d.classList.contains('s')?1:0)==+d.dataset.c);
+ if(ok){$('rm').textContent='';go(3);}else{$('rm').textContent='ロボットの疑いがあります。もう一度！';mkGrid();}
+}
+
+/* 利用規約 */
+const clauses=[
+ '第1条（総則）本規約は、本ページを閲覧するすべての方（以下「祝われる人」）に適用されます。祝われる人は、本ページにアクセスした時点で、おめでとうされる準備ができているものとみなされます。',
+ '第2条（年齢）祝われる人は、本日をもって18歳に到達したことを、自己の責任において宣言するものとします。1日前でも1日後でも、気持ちは本日とします。',
+ '第3条（祝福の受領）祝われる人は、提供される祝福を拒否できません。照れる、謙遜する、「いいよいいよ」と言うことは認められますが、祝福は有効に成立します。',
+ '第4条（ケーキ）ケーキの大きさ、味、有無について、運営者は一切の保証をしません。ただし気持ちとしては特大です。',
+ '第5条（大人の自覚）18歳になっても、急に大人にはなりません。宿題・テスト・朝の眠気は引き続き有効です。',
+ '第6条（個人情報）祝われる人の好きな食べ物、黒歴史、寝顔の写真等は、運営者の心の中にのみ保管されます。',
+ '第7条（承諾の反復）祝われる人は、本規約に繰り返し承諾する義務を負います。これは嫌がらせではなく、愛情表現です。',
+ '第8条（免責）本ページを最後まで読んだ結果生じた疲労・笑い・ツッコミ等について、運営者は責任を負いません。',
+ '第9条（準拠法）本規約は友情法に準拠します。管轄は、いつもの集合場所とします。',
+ '第10条（最終条項）これで最後です。たぶん。'
+];
+const filler='本条の各項目は、前条までの規定に反しない限りにおいて、また、反する場合であっても可能な限り、解釈・運用されるものとし、運営者および祝われる人は、誠意をもって協議するものとします。なお、本文中に「甲」「乙」が登場しない点については、気にしないものとします。';
+let ti=0;
+function initTerms(){ti=0;$('tn').textContent=clauses.length;showTerm();}
+function showTerm(){
+ const box=$('terms'),btn=$('ta');
+ $('tp').textContent=ti+1;
+ box.innerHTML='<b>'+clauses[ti].split('）')[0]+'）</b><br>'+clauses[ti].split('）').slice(1).join('）')+'<br><br>'+Array(14).fill(filler).map((s,i)=>`(${i+1}) `+s).join('<br><br>');
+ box.scrollTop=0;btn.disabled=true;btn.textContent='最後までスクロールしてください';
+ const ck=()=>{if(box.scrollTop+box.clientHeight>=box.scrollHeight-4){btn.disabled=false;
+  btn.textContent=['承諾する','もう一度承諾する','さらに承諾する','しっかり承諾する','心から承諾する','全力で承諾する','本気で承諾する','ほぼ承諾した','最後に承諾する','承諾して祝福へ'][ti]||'承諾する';}};
+ box.onscroll=ck;
+ btn.onclick=()=>{ti++;if(ti>=clauses.length)go(4);else showTerm();};
+}
+
+/* 最終画面 */
+let started=false,img=null;
+$('fi').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{$('pet').innerHTML='<img alt="" src="'+r.result+'">';};r.readAsDataURL(f);};
+function startFin(){
+ if(started)return;started=true;
+ const pet=$('pet'),fin=$('fin');
+ const ph=Array.from({length:8},()=>Math.random()*1000);
+ const sp=Array.from({length:8},()=>.2+Math.random()*.5);
+ let hop=0,hopT=0,burst=0,last=performance.now(),t=0;
+ pet.onclick=()=>{hop=1;burst=1;};
+ function loop(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;t+=dt;
+  const W=fin.clientWidth,H=fin.clientHeight,pw=pet.offsetWidth,phh=pet.offsetHeight;
+  const n=i=>Math.sin(t*sp[i]*2+ph[i])*.5+Math.sin(t*sp[i]*3.1+ph[i]*1.7)*.3+Math.sin(t*sp[i]*.7+ph[i]*2.3)*.2;
+  hopT-=dt;if(hopT<=0){hopT=1+Math.random()*3;if(Math.random()<.6)hop=1;}
+  hop=Math.max(0,hop-dt*1.6);
+  const hy=-Math.sin((1-hop)*Math.PI)*(hop>0?60:0);
+  const x=(W-pw)/2+n(0)*(W-pw)/2*1.1,y=(H-phh)/2+n(1)*(H-phh)/2*.9+hy;
+  const breath=1+Math.sin(t*3)*.04;
+  const sq=hop>0?1+Math.cos((1-hop)*Math.PI*2)*.12:1;
+  const rot=n(2)*20+Math.sin(t*5)*3;
+  const flip=Math.sin(t*sp[3]*1.5+ph[3])>0?1:-1;
+  pet.style.transform=`translate(${x}px,${y}px) rotate(${rot}deg) scale(${flip*breath/sq},${breath*sq})`;
+  draw(dt,W,H);
+  requestAnimationFrame(loop);
+ }
+ const cv=$('cv'),c=cv.getContext('2d'),ps=[];
+ function draw(dt,W,H){
+  if(cv.width!=W||cv.height!=H){cv.width=W;cv.height=H;}
+  if(ps.length<120&&Math.random()<.5)ps.push({x:Math.random()*W,y:-10,vx:(Math.random()-.5)*60,vy:60+Math.random()*100,r:Math.random()*6,s:4+Math.random()*6,h:Math.random()*360});
+  c.clearRect(0,0,W,H);
+  for(let i=ps.length-1;i>=0;i--){const p=ps[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.r+=dt*4;
+   if(p.y>H+10){ps.splice(i,1);continue;}
+   c.save();c.translate(p.x,p.y);c.rotate(p.r);c.fillStyle=`hsl(${p.h},85%,60%)`;c.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);c.restore();}
+ }
+ requestAnimationFrame(loop);
+}
+</script></body></html>
